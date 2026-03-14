@@ -4,7 +4,8 @@ A Next.js app for generating and viewing 3D worlds using **World Labs Marble API
 
 ## Quick start (60 seconds)
 
-**→ [HACKATHON.md](HACKATHON.md)** — Get a world generating in under a minute.
+**→ [QUICKSTART.md](QUICKSTART.md)** — Absolute minimal path to see your first world.
+**→ [HACKATHON.md](HACKATHON.md)** — Full hackathon setup and PICO notes.
 
 1. **Install**
    ```bash
@@ -12,8 +13,8 @@ A Next.js app for generating and viewing 3D worlds using **World Labs Marble API
    ```
 
 2. **Configure API keys**
-   - Copy `.env.example` to `.env.local`
-   - **World Labs**: `WORLDLABS_API_KEY=wl_...` — [platform.worldlabs.ai](https://platform.worldlabs.ai/)
+   - Copy `.env.example` to `.env` (or `.env.local`)
+   - **World Labs** (required): `WORLDLABS_API_KEY=wl_...` — [platform.worldlabs.ai](https://platform.worldlabs.ai/) (every hack team gets Marble Pro)
    - **Anthropic** (for Agent Control): `ANTHROPIC_API_KEY=sk-ant-...` — [console.anthropic.com](https://console.anthropic.com/)
 
 3. **Run**

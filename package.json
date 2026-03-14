@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
     "dev": "next dev",
+    "dev:pico": "next dev -p 3000",
     "dev:spatial": "concurrently \"next dev\" \"cross-env XR_ENV=avp next dev -p 3001\"",
     "build": "next build",
     "build:spatial": "next build && set XR_ENV=avp && next build",

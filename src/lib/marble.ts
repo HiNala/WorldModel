@@ -19,15 +19,61 @@ export const MARBLE_MODELS = {
 
 export type MarbleModel = keyof typeof MARBLE_MODELS;
 
+export interface GenerateOptions {
+  /** Optional image URL for image-to-world. If set, uses image prompt with optional text. */
+  imageUrl?: string;
+  /** Whether the image is panoramic (360°). */
+  isPano?: boolean;
+}
+
 export async function generateWorldServer(
   prompt: string,
   apiKey: string,
   onProgress?: (msg: string) => void,
-  model: MarbleModel | string = "mini"
+  model: MarbleModel | string = "mini",
+  options?: GenerateOptions
 ): Promise<WorldResult> {
   onProgress?.("Starting world generation...");
 
   const modelId = model in MARBLE_MODELS ? MARBLE_MODELS[model as MarbleModel] : model;
+  const displayName = prompt.slice(0, 50) || "Generated world";
+
+  const worldPrompt = options?.imageUrl
+    ? (() => {
+        const isDataUrl = options.imageUrl.startsWith("data:");
+        if (isDataUrl) {
+          const match = options.imageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (match) {
+            const ext = match[1] === "jpeg" ? "jpg" : match[1];
+            return {
+              type: "image" as const,
+              image_prompt: {
+                source: "data_base64" as const,
+                data_base64: match[2],
+                extension: ext,
+              },
+              text_prompt: prompt || undefined,
+              is_pano: options.isPano ?? false,
+              disable_recaption: !!prompt,
+            };
+          }
+        }
+        return {
+          type: "image" as const,
+          image_prompt: {
+            source: "uri" as const,
+            uri: options.imageUrl,
+          },
+          text_prompt: prompt || undefined,
+          is_pano: options.isPano ?? false,
+          disable_recaption: !!prompt,
+        };
+      })()
+    : {
+        type: "text" as const,
+        text_prompt: prompt,
+        disable_recaption: true,
+      };
 
   const res = await fetch(`${API_BASE}/worlds:generate`, {
     method: "POST",
@@ -36,12 +82,9 @@ export async function generateWorldServer(
       "WLT-Api-Key": apiKey,
     },
     body: JSON.stringify({
-      display_name: prompt.slice(0, 50),
+      display_name: displayName,
       model: modelId,
-      world_prompt: {
-        type: "text",
-        text_prompt: prompt,
-      },
+      world_prompt: worldPrompt,
     }),
   });
 
@@ -80,7 +123,13 @@ export async function generateWorldServer(
 
       const spzUrls = world.assets?.splats?.spz_urls;
       const spzUrl =
-        spzUrls?.full_res ?? spzUrls?.["500k"] ?? spzUrls?.["100k"] ?? Object.values(spzUrls ?? {})[0] ?? null;
+        spzUrls?.full_res ??
+        spzUrls?.["2m"] ??
+        spzUrls?.["2M"] ??
+        spzUrls?.["500k"] ??
+        spzUrls?.["100k"] ??
+        Object.values(spzUrls ?? {})[0] ??
+        null;
 
       return {
         world_id: worldId,

@@ -1,8 +1,10 @@
-# World Model Quick Start — How to Generate a World
+# World Model Hackathon — 60-Second First Run
 
-Get the basic world model running in 3 steps.
+You're at the hackathon. Get a world generating in under 2 minutes.
 
-## 1. Install & Run
+---
+
+## 1. Install & run
 
 ```powershell
 cd C:\Users\NalaBook\Desktop\world_model
@@ -12,51 +14,67 @@ npm run dev
 
 Open **http://localhost:3000**
 
-## 2. Generate Your First World
+---
 
-1. You'll see **Simple** mode (default)
-2. Enter a prompt, e.g. *"A medieval village with stone cottages beside a river"*
-3. Click **Generate World**
-4. Wait ~30–45 seconds (Marble API processes in the cloud)
-5. The 3D splat appears in the viewer — drag to orbit
+## 2. Add your Marble API key
 
-## 3. What's Happening Under the Hood
+Create `.env` in the project root (or copy from `.env.example`):
 
 ```
-Your prompt
-    → POST /api/worlds/generate (keeps API key server-side)
-    → Marble API: POST worlds:generate
-    → Poll operations/{id} every 5s until done
-    → Response includes SPZ URL (compressed Gaussian splat)
-    → SparkJS SplatMesh loads SPZ in browser
-    → 3D render with Three.js
+WORLDLABS_API_KEY=wl_your_key_here
 ```
 
-## API Keys
+Get your key at the hack (every team gets Marble Pro) or [platform.worldlabs.ai](https://platform.worldlabs.ai/).
 
-- **WORLDLABS_API_KEY** — Required. In `.env` (you have this.)
-- **ANTHROPIC_API_KEY** — For Agent Control mode (optional for basic world gen)
-
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| "WORLDLABS_API_KEY not configured" | Add key to `.env` in project root |
-| Generation times out | Marble can take up to 2–3 min; wait or try a simpler prompt |
-| Blank 3D viewer | Check browser console; SPZ URL may be missing (Marble returns world_id but sometimes no spz yet — use "Open in Marble Viewer" link) |
-
-## Pre-Generate Worlds (Hackathon Tip)
-
-Before the demo, generate 2–3 worlds at [marble.worldlabs.ai](https://marble.worldlabs.ai/) to have backups if live gen is slow.
+Restart the dev server after adding the key (`Ctrl+C` then `npm run dev`).
 
 ---
 
-## Next: Agent Mission Control
+## 3. Generate your first world
 
-When you're ready for the Agent track:
+1. **Simple** tab is selected by default
+2. Type a prompt: *"A medieval village with stone cottages beside a river"* — [GENERATION_PIPELINE.md](GENERATION_PIPELINE.md) has prompt tips
+3. Click **✨ Generate World**
+4. Wait ~30–45 seconds (Marble processes in the cloud)
+5. The 3D Gaussian splat renders — **drag to orbit** the view
 
-1. Get an API key from [console.anthropic.com](https://console.anthropic.com/)
-2. Add to `.env`: `ANTHROPIC_API_KEY=sk-ant-...`
-3. Restart the dev server
-4. Click **Agent Control** tab → enter a mission → **Launch Agents**
-5. Claude orchestrates specialist agents that each generate worlds via Marble
+---
+
+## How world generation works
+
+| Step | What happens |
+|------|--------------|
+| 1 | You send a text prompt (or image URL) to `/api/worlds/generate` |
+| 2 | The API calls World Labs Marble: `POST worlds:generate` |
+| 3 | Marble returns an operation ID — we poll every 5s until done |
+| 4 | When done, we get `world_id` and `spz_url` (compressed splat) |
+| 5 | SparkJS loads the `.spz` and renders it as a 3D Gaussian splat |
+
+**Core tech:** Marble API (World Labs) + SparkJS (splat renderer) + Three.js (scene).
+
+---
+
+## Agent Control (when you're ready)
+
+1. Add `ANTHROPIC_API_KEY` to `.env`
+2. Click **Agent Control** tab (or press **2**)
+3. Enter a mission: *"Build a space station with a hangar and garden dome"*
+4. Click **Launch Agents** — Claude spawns specialist agents that each generate worlds
+
+---
+
+## PICO Emulator
+
+Use port 3000 so the emulator can reach the app:
+
+```powershell
+npm run dev:pico
+```
+
+Then forward the port:
+
+```powershell
+adb reverse tcp:3000 tcp:3000
+```
+
+In emulator browser: **http://10.0.2.2:3000**

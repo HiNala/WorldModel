@@ -2,6 +2,8 @@
 
 **Worlds in Action / World Model Hackathon** — Get the core world model running so you can see what Marble + SparkJS can do.
 
+**→ For the absolute minimal path: [QUICKSTART.md](QUICKSTART.md)**
+
 ---
 
 ## Prerequisites
@@ -25,11 +27,12 @@ Open **http://localhost:3000**
 
 ## Generate Your First World
 
-1. **Simple** mode is selected by default
-2. Type a prompt, e.g.: *"A medieval village with stone cottages beside a river"*
-3. Click **✨ Generate World**
-4. Wait ~30–45 seconds (Marble processes in the cloud)
-5. The 3D Gaussian splat renders in the viewer — **drag with mouse to orbit**
+1. **Simple** mode is selected by default (press **1** to switch; **2** for Agent Control)
+2. Type a prompt, e.g.: *"A medieval village with stone cottages beside a river"* — see [GENERATION_PIPELINE.md](GENERATION_PIPELINE.md) for prompt tips
+3. Optional: add an **image URL** or **drop/paste an image** for image-to-world
+4. Click **✨ Generate World** (or **Ctrl+Enter**)
+5. Wait ~30–45 seconds (Marble processes in the cloud; status updates as it runs)
+6. The 3D Gaussian splat renders — **drag to orbit** · **⛶ Full screen** · **⟲ Reset view**
 
 ---
 
@@ -37,9 +40,11 @@ Open **http://localhost:3000**
 
 | Tech | Role |
 |------|------|
-| **Marble API** | Text → 3D world (World Labs) |
+| **Marble API** | Text or image → 3D world (World Labs) |
 | **SparkJS** | Renders Gaussian splats in the browser |
 | **Three.js** | 3D scene + orbit camera |
+
+**Image-to-world:** Paste a URL, drop a file, or paste from clipboard (Ctrl+V). Works best with landscapes, interiors, or street scenes (PNG/JPG/WebP).
 
 ---
 
@@ -63,14 +68,18 @@ Get keys:
 When you’re ready for the Agent track:
 
 1. Add `ANTHROPIC_API_KEY` to `.env`
-2. Click **Agent Control** tab
+2. Click **Agent Control** tab (or press **2**)
 3. Enter a mission, e.g.: *"Build a space station with a hangar and garden dome"*
-4. Click **🚀 Launch Agents**
-5. Claude orchestrates specialist agents; each generates worlds via Marble
+4. Optional: **Hold to Speak** for voice commands
+5. Click **🚀 Launch Agents** (or **Ctrl+Enter**)
+6. Claude orchestrates specialist agents; each generates worlds via Marble
+7. **Copy** links from Generated Worlds · **Full screen** on the 3D viewer
 
 ---
 
 ## PICO Emulator (If Demo’ing on PICO)
+
+Use port 3000: `npm run dev:pico`
 
 ```powershell
 adb reverse tcp:3000 tcp:3000

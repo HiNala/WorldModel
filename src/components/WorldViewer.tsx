@@ -19,6 +19,7 @@ interface WorldViewerProps {
 
 export function WorldViewer({ splatUrl, worldId, worlds: worldsProp }: WorldViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<{ reset: () => void } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadedCount, setLoadedCount] = useState(0);
 
@@ -44,19 +45,41 @@ export function WorldViewer({ splatUrl, worldId, worlds: worldsProp }: WorldView
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111);
 
-    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-    camera.position.set(0, 1.6, 3);
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.05, 1000);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance",
+    });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 4));
     container.appendChild(renderer.domElement);
 
-    let rotY = 0;
-    let rotX = 0;
+    const orbit = { rotY: 0, rotX: 0 };
+    const target = new THREE.Vector3(0, 1, 0);
+    let radius = 8;
+    const eyeHeight = 1.6;
     let isDragging = false;
     let prevX = 0;
     let prevY = 0;
+
+    const updateCamera = () => {
+      const dx = radius * Math.sin(orbit.rotY) * Math.cos(orbit.rotX);
+      const dy = radius * Math.sin(orbit.rotX);
+      const dz = radius * Math.cos(orbit.rotY) * Math.cos(orbit.rotX);
+      camera.position.set(target.x + dx, target.y + eyeHeight + dy, target.z + dz);
+      camera.lookAt(target);
+    };
+
+    controlsRef.current = {
+      reset: () => {
+        orbit.rotX = 0;
+        orbit.rotY = 0;
+        updateCamera();
+      },
+    };
+
+    updateCamera();
 
     const onPointerDown = (e: MouseEvent | TouchEvent) => {
       isDragging = true;
@@ -68,15 +91,10 @@ export function WorldViewer({ splatUrl, worldId, worlds: worldsProp }: WorldView
     const onPointerMove = (e: MouseEvent | TouchEvent) => {
       if (!isDragging) return;
       const t = ("touches" in e ? e.touches[0] : e) as MouseEvent;
-      rotY += (t.clientX - prevX) * 0.005;
-      rotX += (t.clientY - prevY) * 0.005;
-      rotX = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, rotX));
-      camera.position.set(
-        3 * Math.sin(rotY) * Math.cos(rotX),
-        1.6 + 3 * Math.sin(rotX),
-        3 * Math.cos(rotY) * Math.cos(rotX)
-      );
-      camera.lookAt(0, 1, 0);
+      orbit.rotY += (t.clientX - prevX) * 0.005;
+      orbit.rotX += (t.clientY - prevY) * 0.005;
+      orbit.rotX = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, orbit.rotX));
+      updateCamera();
       prevX = t.clientX;
       prevY = t.clientY;
     };
@@ -92,10 +110,33 @@ export function WorldViewer({ splatUrl, worldId, worlds: worldsProp }: WorldView
     const SPACING = 28;
     const splatsWithUrls = worlds.filter((w) => w.splatUrl) as { splatUrl: string; worldId: string; agentName?: string }[];
     const n = splatsWithUrls.length;
+    const splatRefs: SplatMesh[] = [];
+
+    const frameAllSplats = () => {
+      if (splatRefs.length === 0) return;
+      try {
+        const unionBox = new THREE.Box3();
+        splatRefs.forEach((splat) => {
+          const box = splat.getBoundingBox(true);
+          box.applyMatrix4(splat.matrixWorld);
+          unionBox.union(box);
+        });
+        const center = new THREE.Vector3();
+        unionBox.getCenter(center);
+        target.copy(center);
+        const size = new THREE.Vector3();
+        unionBox.getSize(size);
+        const diagonal = Math.sqrt(size.x ** 2 + size.y ** 2 + size.z ** 2);
+        const fovRad = (camera.fov * Math.PI) / 180;
+        radius = Math.max(4, (diagonal * 0.6) / Math.tan(fovRad / 2));
+        updateCamera();
+      } catch {
+        // Bounding box not ready
+      }
+    };
 
     if (n > 0) {
       queueMicrotask(() => setError(null));
-      let loaded = 0;
       splatsWithUrls.forEach((w, i) => {
         const offsetX = n === 1 ? 0 : (i - (n - 1) / 2) * SPACING;
         try {
@@ -103,7 +144,9 @@ export function WorldViewer({ splatUrl, worldId, worlds: worldsProp }: WorldView
             url: w.splatUrl,
             onLoad: () => {
               setError(null);
+              splatRefs.push(splat);
               setLoadedCount((c) => c + 1);
+              if (splatRefs.length === n) frameAllSplats();
             },
           });
           splat.position.set(offsetX, 0, 0);
@@ -175,10 +218,24 @@ export function WorldViewer({ splatUrl, worldId, worlds: worldsProp }: WorldView
   return (
     <div className="relative h-full min-h-[400px] w-full overflow-hidden rounded-xl bg-gray-900">
       <div ref={containerRef} className="h-full w-full" />
+      {worlds.length > 0 && !loading && (
+        <button
+          type="button"
+          onClick={() => controlsRef.current?.reset()}
+          className="absolute bottom-3 left-3 z-10 rounded-lg bg-black/60 px-3 py-2 text-sm text-white/90 backdrop-blur-sm transition hover:bg-black/80"
+          title="Reset camera view"
+        >
+          ⟲ Reset view
+        </button>
+      )}
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-900/90">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-600 border-t-blue-500" />
-          <span className="text-sm text-gray-400">Loading 3D splat...</span>
+          <span className="text-sm text-gray-400">
+            {expectedSplats > 1
+              ? `Loading splats... ${loadedCount}/${expectedSplats}`
+              : "Loading 3D splat..."}
+          </span>
         </div>
       )}
     </div>

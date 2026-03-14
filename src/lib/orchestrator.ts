@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { generateWorldServer } from "./marble";
+import { processPrompt } from "./promptPipeline";
 import type { Agent, AgentRole } from "./agents";
 
 export type OrchestratorEvent =
@@ -24,7 +25,14 @@ When given a world-building task:
 - Use generate_world for each agent's piece (with vivid, detailed prompts)
 - Announce progress as you go
 
-Keep prompts for generate_world very descriptive and specific — the AI will create an actual 3D environment from them. Example: "A sunlit medieval courtyard with a stone well in the center, ivy-covered walls, and a wooden gate leading to cobblestone streets" is better than "a medieval area".
+COHERENT WORLD BUILDING: Each generated world will be placed alongside the others in a composite scene. Keep consistent style, lighting, and scale across all pieces—they should feel like zones of one connected place. Use matching atmosphere (e.g., same time of day) and architectural style. Name agents by their zone: "Village Center", "River Bank", "Castle Approach".
+
+PROMPT FORMULA for generate_world (follow this for best results):
+- [Subject]: what the place is (e.g. "A medieval courtyard", "A futuristic hangar")
+- [Materials]: specific surfaces and textures (stone, wood, cobblestone, metal, moss, ivy)
+- [Lighting]: time of day and mood (morning light, golden hour, soft shadows, dappled, overcast)
+- [Spatial]: layout and scale (path leading to..., in the foreground, human-scale, cozy)
+Example good prompt: "A sunlit medieval courtyard with a stone well in the center, ivy-covered walls, and a wooden gate leading to cobblestone streets, morning light casting long shadows". Bad: "a medieval area".
 
 You are enthusiastic and narrate what you're doing.`;
 
@@ -48,17 +56,26 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "generate_world",
     description:
-      "Generate a 3D world environment using World Labs Marble. Takes ~30-45 seconds. Returns a world_id.",
+      "Generate a 3D world using World Labs Marble. Text-only: ~30-45s (mini) or ~2-3min (plus). Image-to-world: use image_url for a reference image. Returns world_id.",
     input_schema: {
       type: "object" as const,
       properties: {
         prompt: {
           type: "string" as const,
-          description: "Detailed description of the 3D environment to generate",
+          description: "Detailed description: subject + materials (stone, wood, metal) + lighting (morning, golden hour) + spatial (paths, scale). Use commas. Up to 2000 chars. Required for text; optional for image-to-world.",
         },
         for_agent: {
           type: "string" as const,
           description: "Which agent this world is for (agent name)",
+        },
+        model: {
+          type: "string" as const,
+          enum: ["mini", "plus"],
+          description: "mini = fast ~30-45s, plus = higher quality ~2-3min. Default: mini",
+        },
+        image_url: {
+          type: "string" as const,
+          description: "Optional: public image URL for image-to-world (PNG/JPG/WebP, landscapes/interiors work best)",
         },
       },
       required: ["prompt"],
@@ -208,6 +225,10 @@ export async function runOrchestrator(
 
           case "generate_world": {
             const agentName = input.for_agent ?? "Orchestrator";
+            const model = input.model === "plus" ? "plus" : "mini";
+            const opts = input.image_url?.trim()
+              ? { imageUrl: input.image_url.trim(), isPano: false }
+              : undefined;
             emit({
               type: "announce",
               data: { message: `🔨 Generating: ${input.prompt.slice(0, 60)}...` },
@@ -217,11 +238,18 @@ export async function runOrchestrator(
               data: {
                 agentId: orch.id,
                 logType: "action",
-                text: `Generating world for ${agentName}...`,
+                text: `Generating world for ${agentName} (${model})...`,
               },
             });
 
-            const world = await generateWorldServer(input.prompt, worldLabsKey);
+            const { prompt: processedPrompt } = processPrompt(input.prompt || "Scene");
+            const world = await generateWorldServer(
+              processedPrompt,
+              worldLabsKey,
+              undefined,
+              model,
+              opts
+            );
 
             const target = getAgentByName(agentName);
             if (target) {

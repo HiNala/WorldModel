@@ -1,0 +1,24 @@
+---
+description: Marble world-generation prompt pipeline and best practices
+globs: "**/{promptPipeline,orchestrator,marble,demos}.ts"
+alwaysApply: false
+---
+
+# Generation Pipeline
+
+Follow GENERATION_PIPELINE.md when editing world-generation code.
+
+## Prompt formula (Marble API)
+
+Subject → Materials → Lighting → Spatial. Use commas.
+
+## Pipeline heuristics
+
+- `hasMaterialDetail`, `hasLightingDetail`, `hasSpatialDetail`
+- `qualityTier`: weak | ok | strong
+- Anti-patterns: hedge words (maybe, kind of, something like)
+- `truncateAtWordBoundary`: max 2000 chars
+
+## API
+
+Generate route returns `pipeline_meta`: `{ qualityTier, enhanced, truncated }`. `truncated` comes from processPrompt when input exceeded 2000 chars.
