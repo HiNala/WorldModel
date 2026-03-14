@@ -34,6 +34,7 @@ interface WorldInfo {
 export default function Home() {
   const [mode, setMode] = useState<"simple" | "agents">("simple");
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+  const [marbleModel, setMarbleModel] = useState<"mini" | "plus">("mini");
   const [command, setCommand] = useState(DEFAULT_COMMAND);
   const [status, setStatus] = useState("Ready");
   const [world, setWorld] = useState<{ world_id: string; spz_url: string | null } | null>(null);
@@ -67,7 +68,7 @@ export default function Home() {
       const res = await fetch("/api/worlds/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, model: marbleModel }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -246,12 +247,43 @@ export default function Home() {
                   disabled={isGenerating}
                   placeholder="Describe the 3D world you want... (Ctrl+Enter to generate)"
                 />
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Model:</span>
+                  <button
+                    type="button"
+                    onClick={() => setMarbleModel("mini")}
+                    disabled={isGenerating}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      marbleModel === "mini"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                    } disabled:opacity-50`}
+                  >
+                    mini (fast, ~30–45s)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMarbleModel("plus")}
+                    disabled={isGenerating}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      marbleModel === "plus"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                    } disabled:opacity-50`}
+                  >
+                    plus (quality, ~2–3min)
+                  </button>
+                </div>
                 <button
                   onClick={handleSimpleGenerate}
                   disabled={isGenerating}
                   className="mt-4 w-full rounded-lg bg-blue-600 py-3 font-semibold shadow-lg shadow-blue-600/25 transition hover:bg-blue-500 hover:shadow-blue-600/40 disabled:bg-gray-700 disabled:shadow-none"
                 >
-                  {isGenerating ? "⏳ Generating... (~30–45s)" : "✨ Generate World"}
+                  {isGenerating
+                    ? marbleModel === "plus"
+                      ? "⏳ Generating... (~2–3min)"
+                      : "⏳ Generating... (~30–45s)"
+                    : "✨ Generate World"}
                 </button>
               </div>
               <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4">

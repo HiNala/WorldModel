@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { prompt?: string };
+  let body: { prompt?: string; model?: "mini" | "plus" };
   try {
     body = await req.json();
   } catch {
@@ -24,8 +24,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing or empty prompt" }, { status: 400 });
   }
 
+  const model = body.model === "plus" ? "plus" : "mini";
+
   try {
-    const result = await generateWorldServer(prompt, apiKey);
+    const result = await generateWorldServer(prompt, apiKey, undefined, model);
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Generation failed";

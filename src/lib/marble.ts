@@ -12,12 +12,22 @@ export interface WorldResult {
   spz_url: string | null;
 }
 
+export const MARBLE_MODELS = {
+  mini: "Marble 0.1-mini", // ~30–45s, ~$0.20
+  plus: "Marble 0.1-plus", // ~2–3min, ~$1.20, higher quality
+} as const;
+
+export type MarbleModel = keyof typeof MARBLE_MODELS;
+
 export async function generateWorldServer(
   prompt: string,
   apiKey: string,
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  model: MarbleModel | string = "mini"
 ): Promise<WorldResult> {
   onProgress?.("Starting world generation...");
+
+  const modelId = model in MARBLE_MODELS ? MARBLE_MODELS[model as MarbleModel] : model;
 
   const res = await fetch(`${API_BASE}/worlds:generate`, {
     method: "POST",
@@ -27,7 +37,7 @@ export async function generateWorldServer(
     },
     body: JSON.stringify({
       display_name: prompt.slice(0, 50),
-      model: "Marble 0.1-mini",
+      model: modelId,
       world_prompt: {
         type: "text",
         text_prompt: prompt,
