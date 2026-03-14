@@ -42,7 +42,15 @@ A Next.js app for generating and viewing 3D worlds using **World Labs Marble API
 - **Next.js 16** + React 19
 - **World Labs Marble API** — text/image/video → 3D Gaussian splats
 - **SparkJS** — render splats in the browser
+- **WebSpatial SDK** — spatial-ready layout for PICO / visionOS
 - **Tailwind CSS**
+
+## WebSpatial (spatial computing)
+
+WorldMind uses the [WebSpatial SDK](https://webspatial.dev/) for spatial-capable builds. The multi-panel layout (Command, Agents, World Viewer, Activity) maps to spatial windows when run in WebSpatial environments.
+
+- **Standard web**: `npm run dev` → http://localhost:3000
+- **Spatial build** (visionOS / PICO): `npm run dev:spatial` runs both standard and XR builds
 
 ## PICO Emulator (for Agentic Mission Control track)
 
@@ -90,6 +98,7 @@ Note their world IDs and use them as fallbacks or examples.
 - [SensAI World Model Kits](https://github.com/SensAIHackademy/SensAIWorldModelKits)
 - [Marble API Docs](https://docs.worldlabs.ai/)
 - [SparkJS Docs](https://sparkjs.dev/)
+- [WebSpatial SDK](https://webspatial.dev/) — spatial apps for PICO, visionOS
 - [PICO Developer Portal](https://developer.picoxr.com/)
 
 ## License

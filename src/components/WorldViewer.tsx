@@ -4,19 +4,38 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { SplatMesh } from "@sparkjsdev/spark";
 
+export interface WorldInfo {
+  splatUrl: string | null;
+  worldId: string;
+  agentName?: string;
+}
+
 interface WorldViewerProps {
   splatUrl?: string | null;
   worldId?: string | null;
+  /** Multiple worlds shown as a composite scene (spaced along X axis) */
+  worlds?: WorldInfo[];
 }
 
-export function WorldViewer({ splatUrl, worldId }: WorldViewerProps) {
+export function WorldViewer({ splatUrl, worldId, worlds: worldsProp }: WorldViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loadedForUrl, setLoadedForUrl] = useState<string | null>(null);
-  const loading = splatUrl ? loadedForUrl !== splatUrl : false;
+  const [loadedCount, setLoadedCount] = useState(0);
+
+  // Normalize to worlds array for unified handling
+  const worlds: WorldInfo[] = worldsProp?.length
+    ? worldsProp
+    : splatUrl || worldId
+      ? [{ splatUrl: splatUrl ?? null, worldId: worldId ?? "" }]
+      : [];
+
+  const hasSplats = worlds.some((w) => w.splatUrl);
+  const expectedSplats = worlds.filter((w) => w.splatUrl).length;
+  const loading = hasSplats && expectedSplats > 0 && loadedCount < expectedSplats;
 
   useEffect(() => {
     if (!containerRef.current) return;
+    setLoadedCount(0);
 
     const container = containerRef.current;
     const width = container.clientWidth;
@@ -70,25 +89,30 @@ export function WorldViewer({ splatUrl, worldId }: WorldViewerProps) {
     window.addEventListener("mousemove", onPointerMove as EventListener);
     window.addEventListener("touchmove", onPointerMove as EventListener, { passive: true });
 
-    if (splatUrl) {
+    const SPACING = 28;
+    const splatsWithUrls = worlds.filter((w) => w.splatUrl) as { splatUrl: string; worldId: string; agentName?: string }[];
+    const n = splatsWithUrls.length;
+
+    if (n > 0) {
       queueMicrotask(() => setError(null));
-      try {
-        const url = splatUrl;
-        const splat = new SplatMesh({
-          url,
-          onLoad: () => {
-            setError(null);
-            setLoadedForUrl(url);
-          },
-        });
-        scene.add(splat);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to load splat";
-        queueMicrotask(() => {
-          setError(msg);
-          setLoadedForUrl(splatUrl);
-        });
-      }
+      let loaded = 0;
+      splatsWithUrls.forEach((w, i) => {
+        const offsetX = n === 1 ? 0 : (i - (n - 1) / 2) * SPACING;
+        try {
+          const splat = new SplatMesh({
+            url: w.splatUrl,
+            onLoad: () => {
+              setError(null);
+              setLoadedCount((c) => c + 1);
+            },
+          });
+          splat.position.set(offsetX, 0, 0);
+          scene.add(splat);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Failed to load splat";
+          queueMicrotask(() => setError(msg));
+        }
+      });
     }
 
     function animate() {
@@ -118,7 +142,7 @@ export function WorldViewer({ splatUrl, worldId }: WorldViewerProps) {
       renderer.dispose();
       container.innerHTML = "";
     };
-  }, [splatUrl]);
+  }, [JSON.stringify(worlds.map((w) => ({ u: w.splatUrl, id: w.worldId })))]);
 
   if (error) {
     return (
@@ -129,12 +153,15 @@ export function WorldViewer({ splatUrl, worldId }: WorldViewerProps) {
     );
   }
 
-  if (!splatUrl && worldId) {
+  const firstWorldId = worlds[0]?.worldId ?? worldId;
+  if (worlds.length > 0 && !hasSplats && firstWorldId) {
     return (
       <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-4 rounded-xl bg-gray-900 p-6">
-        <p className="text-gray-400">View the generated world in Marble</p>
+        <p className="text-gray-400">
+          {worlds.length > 1 ? "View generated worlds in Marble" : "View the generated world in Marble"}
+        </p>
         <a
-          href={`https://marble.worldlabs.ai/world/${worldId}`}
+          href={`https://marble.worldlabs.ai/world/${firstWorldId}`}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
@@ -148,7 +175,7 @@ export function WorldViewer({ splatUrl, worldId }: WorldViewerProps) {
   return (
     <div className="relative h-full min-h-[400px] w-full overflow-hidden rounded-xl bg-gray-900">
       <div ref={containerRef} className="h-full w-full" />
-      {loading && splatUrl && (
+      {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-900/90">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-600 border-t-blue-500" />
           <span className="text-sm text-gray-400">Loading 3D splat...</span>

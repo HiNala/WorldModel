@@ -7,6 +7,7 @@ export type OrchestratorEvent =
   | { type: "log"; data: { agentId: string; logType: string; text: string } }
   | { type: "world"; data: { worldId: string; agentName: string; spzUrl: string | null } }
   | { type: "announce"; data: { message: string } }
+  | { type: "plan"; data: { plan: string; phase?: string } }
   | { type: "done" }
   | { type: "error"; data: { message: string } };
 
@@ -15,9 +16,10 @@ const SYSTEM_PROMPT = `You are the Orchestrator — an AI that wakes up in an em
 1. spawn_agent: Create specialist agents (terrain, architect, narrator, lighting, scout)
 2. generate_world: Call the World Labs Marble API to create a 3D environment from a text description
 3. announce: Send a message to the mission control dashboard
+4. update_plan: Set the current plan and phase so the dashboard shows your build strategy
 
 When given a world-building task:
-- First announce your plan
+- First use update_plan to set your strategy, then announce it
 - Spawn 2-3 specialist agents with specific tasks
 - Use generate_world for each agent's piece (with vivid, detailed prompts)
 - Announce progress as you go
@@ -71,6 +73,18 @@ const TOOLS: Anthropic.Tool[] = [
         message: { type: "string" as const, description: "Message to display" },
       },
       required: ["message"],
+    },
+  },
+  {
+    name: "update_plan",
+    description: "Update the current world-building plan and phase displayed on the dashboard",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        plan: { type: "string" as const, description: "The build plan or strategy" },
+        phase: { type: "string" as const, description: "Current phase name, e.g. 'Terrain', 'Architecture'" },
+      },
+      required: ["plan"],
     },
   },
 ];
@@ -240,6 +254,26 @@ export async function runOrchestrator(
             emit({
               type: "log",
               data: { agentId: orch.id, logType: "action", text: `📢 ${input.message}` },
+            });
+            result = { success: true };
+            break;
+          }
+
+          case "update_plan": {
+            emit({
+              type: "plan",
+              data: {
+                plan: input.plan,
+                phase: input.phase ?? undefined,
+              },
+            });
+            emit({
+              type: "log",
+              data: {
+                agentId: orch.id,
+                logType: "thought",
+                text: input.phase ? `Phase: ${input.phase} — ${input.plan}` : input.plan,
+              },
             });
             result = { success: true };
             break;

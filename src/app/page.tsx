@@ -43,6 +43,7 @@ export default function Home() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [announcements, setAnnouncements] = useState<string[]>([]);
   const [worlds, setWorlds] = useState<WorldInfo[]>([]);
+  const [plan, setPlan] = useState<{ plan: string; phase?: string } | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [config, setConfig] = useState<{
     hasWorldLabs?: boolean;
@@ -145,6 +146,8 @@ export default function Home() {
                 } else if (event.type === "announce") {
                   setAnnouncements((prev) => [...prev, event.data.message]);
                   speak(event.data.message).catch(() => {});
+                } else if (event.type === "plan") {
+                  setPlan({ plan: event.data.plan, phase: event.data.phase });
                 } else if (event.type === "world") {
                   setWorlds((prev) => [
                     ...prev,
@@ -177,7 +180,6 @@ export default function Home() {
 
   const orchestrator = agents.find((a) => a.role === "orchestrator");
   const specialists = agents.filter((a) => a.role !== "orchestrator");
-  const latestWorld = worlds.at(-1);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -350,6 +352,14 @@ export default function Home() {
                   {isRunning ? "⏳ Agents Working..." : "🚀 Launch Agents"}
                 </button>
               </div>
+              {plan && (
+                <div className="rounded-xl border border-blue-800/50 bg-blue-950/30 p-4">
+                  <h3 className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-blue-300">
+                    📋 Build Plan {plan.phase && `· ${plan.phase}`}
+                  </h3>
+                  <p className="text-sm text-gray-200 whitespace-pre-wrap">{plan.plan}</p>
+                </div>
+              )}
             </div>
 
             {/* Agent Panel — Orchestrator + specialists */}
@@ -368,10 +378,13 @@ export default function Home() {
             {/* World Viewer Panel — 3D spatial view */}
             <div className="world-viewer-panel">
               <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900/80" style={{ minHeight: 400 }}>
-                {latestWorld ? (
+                {worlds.length > 0 ? (
                   <WorldViewer
-                    splatUrl={latestWorld.spzUrl}
-                    worldId={latestWorld.worldId}
+                    worlds={worlds.map((w) => ({
+                      splatUrl: w.spzUrl,
+                      worldId: w.worldId,
+                      agentName: w.agentName,
+                    }))}
                   />
                 ) : (
                   <div className="flex min-h-[400px] flex-col items-center justify-center gap-5 rounded-xl border-2 border-dashed border-gray-700/50 bg-gray-900/50 px-8 text-center">
