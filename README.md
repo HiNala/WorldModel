@@ -2,9 +2,9 @@
 
 A Next.js app for generating and viewing 3D worlds using **World Labs Marble API** and **SparkJS** (Gaussian splats). Built for the Worlds in Action / World Model Hackathon.
 
-## Quick start
+## Quick start (60 seconds)
 
-**→ See [QUICKSTART.md](QUICKSTART.md) for the minimal "how to generate a world" flow.**
+**→ [HACKATHON.md](HACKATHON.md)** — Get a world generating in under a minute.
 
 1. **Install**
    ```bash
